@@ -1,0 +1,57 @@
+## Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+**/*.pyc
+**/*.pyo
+**/*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+coverage.xml
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+site/
+
+## Environments
+.env
+.env.*
+.venv/
+venv/
+backend/.venv/
+
+## Databases & media
+*.sqlite3
+db.sqlite3
+backend/db.sqlite3
+media/
+backend/media/
+staticfiles/
+backend/staticfiles/
+
+## Node/React
+node_modules/
+chatfrontend/node_modules/
+chatfrontend/dist/
+chatfrontend/build/
+chatfrontend/.env
+chatfrontend/.cache/
+
+## Logs
+*.log
+
+## OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+## Docker
+# Keep .dockerignore files tracked (do not ignore)
+
