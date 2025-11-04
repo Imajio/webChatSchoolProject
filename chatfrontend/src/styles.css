@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   color-scheme: light;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f5f5f5;
@@ -59,11 +59,13 @@ main {
 }
 
 .chat-window {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   background-color: #fafafa;
   min-height: 0; /* Allow inner feed to shrink and scroll */
+  height: 100%;
 }
 
 .chat-header {
@@ -84,7 +86,9 @@ main {
 
 .message-feed {
   flex: 1;
+  min-height: 0;
   padding: 16px;
+  padding-bottom: 100px; /* Space for the overlaid input bar */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -127,19 +131,7 @@ main {
    font-size: 1rem;
  }
 
- .input-bar textarea {
-   flex: 1;
-   padding: 10px 12px;
-   border: 1px solid var(--border);
-   border-radius: 8px;
-   font-size: 1rem;
-   line-height: 1.3;
-   resize: none;
-   max-height: 200px;
-   overflow-y: hidden;
-   background: var(--panel);
-   color: var(--text);
- }
+ .input-bar textarea { flex: 1; padding: 10px 12px 0 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; line-height: 1.3; resize: none; max-height: 200px; overflow-y: hidden; background: var(--panel); color: var(--text); }
 
 .input-bar button {
   padding: 0 20px;
@@ -214,6 +206,8 @@ main {
   --message-self: #dcf8c6;
   --auth-grad-start: #4f86f7;
   --auth-grad-end: #6ad3ff;
+  --input-bar-bg-start: rgba(255, 255, 255, 0.1);
+  --input-bar-bg-end: rgba(255, 255, 255, 0.99);
 }
 
 [data-theme='dark'] {
@@ -230,6 +224,8 @@ main {
   --message-self: #0e2a1e;
   --auth-grad-start: #0f1720;
   --auth-grad-end: #111827;
+  --input-bar-bg-start: rgba(15, 20, 26, 0.1);
+  --input-bar-bg-end: rgba(15, 20, 26, 0.99);
 }
 
 body { background: var(--bg); color: var(--text); }
@@ -250,19 +246,7 @@ body { background: var(--bg); color: var(--text); }
    border-radius: 8px;
    font-size: 1rem;
  }
- .input-bar textarea {
-   flex: 1;
-   padding: 10px 12px;
-   border: 1px solid var(--border);
-   border-radius: 8px;
-   font-size: 1rem;
-   line-height: 1.3;
-   resize: none;
-   max-height: 200px;
-   overflow-y: hidden;
-   background: var(--panel);
-   color: var(--text);
- }
+ .input-bar textarea { flex: 1; padding: 10px 12px 0 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; line-height: 1.3; resize: none; max-height: 200px; overflow-y: hidden; background: var(--panel); color: var(--text); }
 .input-bar button { background-color: var(--accent); }
 .auth-wrapper { background: linear-gradient(135deg, var(--auth-grad-start) 0%, var(--auth-grad-end) 100%); }
 .auth-card { background-color: var(--panel); color: var(--text); }
@@ -272,3 +256,113 @@ body { background: var(--bg); color: var(--text); }
 
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal { width: 100%; max-width: 520px; padding: 20px; border-radius: 12px; background: var(--panel); color: var(--text); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+
+/* Restored enhancements from recent updates */
+/* Sidebar overlay gradient (left panel only) */
+.sidebar { position: relative; z-index: 0; }
+.sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 50% transparent green glow */
+  background: radial-gradient(900px 900px at 50% 120%, #c5ffe080, transparent 60%);
+}
+
+/* Collapsed input form to match input width */
+.input-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 16px;
+  padding-right: 0; /* Extend to edge for scrollbar */
+  margin: 0;
+  width: 100%;
+  background: transparent;
+  z-index: 10;
+}
+
+.input-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 20px; /* Leave space for scrollbar */
+  bottom: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  mask-image: linear-gradient(to bottom, transparent, black 20px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 20px);
+  z-index: -1;
+}
+
+/* Input shell wrapper (hugs the input + 2px) */
+.input-shell {
+  position: relative;
+  display: inline-flex;
+  padding: 1px; /* shell width = textarea width + 2px */
+  border-radius: 10px; /* 8px input radius + 2px */
+  background: var(--panel);
+  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 900px;
+}
+.input-shell textarea { padding-right: 54px; width: 100%; }
+
+/* Place the send button inside the shell on the right */
+.input-shell .send-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+}
+
+/* High-contrast placeholder inside input */
+.input-shell textarea::placeholder,
+.input-shell textarea::-webkit-input-placeholder,
+.input-shell textarea::-moz-placeholder,
+.input-shell textarea:-ms-input-placeholder,
+.input-shell textarea::-ms-input-placeholder { color: var(--text); opacity: 1; }
+
+/* Left slide drawer (menu) */
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.25); opacity: 0; pointer-events: none; transition: opacity .2s ease; z-index: 9000; }
+.drawer-backdrop.show { opacity: 1; pointer-events: auto; }
+.left-drawer { position: fixed; top: 0; bottom: 0; left: 0; width: var(--sidebar-width); transform: translateX(-100%); transition: transform .25s ease; z-index: 10001; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--border); box-shadow: 0 8px 20px rgba(0,0,0,0.12); box-sizing: border-box; overflow-x: hidden; }
+.left-drawer.open { transform: translateX(0); }
+.drawer-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px; border-bottom: 1px solid var(--border); }
+.drawer-section { padding: 14px; overflow-y: auto; overflow-x: hidden; }
+.drawer-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.drawer-actions button { background: var(--panel-alt); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.drawer-actions button.active { border-color: var(--accent); }
+.drawer-search { position: relative; }
+.drawer-search input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+.search-hints { list-style: none; padding: 6px 0; margin: 6px 0 0; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); max-height: 220px; overflow-y: auto; max-width: 100%; box-sizing: border-box; }
+.search-hints .hint { padding: 8px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.search-hints .hint:hover { background: var(--hover); }
+.search-hints .hint.muted { color: var(--muted); cursor: default; }
+.search-hints .nick { font-weight: 600; }
+.search-hints .user { font-size: .85rem; color: var(--muted); }
+
+/* Generic glass card used in sidebar sections */
+.glass-block { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+/* Ensure icon is visible inside the button */
+.input-shell .send-btn { z-index: 3; }
+.input-shell .send-btn svg { width: 22px; height: 22px; display: block; color: currentColor; }
+.input-shell .send-btn svg path,
+.input-shell .send-btn svg polygon,
+.input-shell .send-btn svg rect,
+.input-shell .send-btn svg circle { fill: currentColor; stroke: currentColor; }
+

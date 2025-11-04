@@ -11,9 +11,11 @@ from .models import Chat, Message, Profile
 from .serializers import (
     ChatCreateSerializer,
     ChatSerializer,
+    UserSerializer,
     MessageSerializer,
     ProfileSerializer,
 )
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -101,6 +103,64 @@ class ChatViewSet(viewsets.ModelViewSet):
         serializer = ChatSerializer(chat, context={'request': request})
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         return Response(serializer.data, status=status_code)
+
+    @action(detail=False, methods=['post'], url_path='start-group')
+    def start_group(self, request):
+        """
+        Create a group chat with the given list of usernames.
+
+        Body JSON:
+          - name: optional string (group name)
+          - usernames: required list of usernames to include (excluding the requester is allowed; requester will be added automatically)
+        """
+        usernames = request.data.get('usernames')
+        name = (request.data.get('name') or '').strip()
+        if not isinstance(usernames, list) or not usernames:
+            return Response({'detail': 'Provide a non-empty list of usernames.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        norm_usernames = []
+        for u in usernames:
+            if not isinstance(u, str):
+                return Response({'detail': 'Usernames must be strings.'}, status=status.HTTP_400_BAD_REQUEST)
+            v = u.strip()
+            if v:
+                norm_usernames.append(v)
+
+        # Remove the requester if present (will be added automatically)
+        requester = request.user.username
+        norm_usernames = [u for u in dict.fromkeys(norm_usernames) if u.lower() != requester.lower()]
+        if not norm_usernames:
+            return Response({'detail': 'Please include at least one other user.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Resolve usernames (case-sensitive per DB collation)
+        users = list(User.objects.filter(username__in=norm_usernames))
+        found_usernames = {u.username for u in users}
+        missing = [u for u in norm_usernames if u not in found_usernames]
+        if missing:
+            return Response({'detail': f"Unknown users: {', '.join(missing)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        chat = Chat.objects.create(is_group=True, name=name)
+        chat.participants.add(request.user, *users)
+
+        chat = Chat.objects.prefetch_related('participants', 'participants__profile').get(id=chat.id)
+        serializer = ChatSerializer(chat, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class UserSearchViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.select_related('profile').all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        q = request.query_params.get('q', '')
+        qs = self.get_queryset()
+        if q:
+            q = q.strip()
+            qs = qs.filter(Q(username__icontains=q) | Q(profile__nickname__icontains=q))
+        qs = qs.order_by('username')[:10]
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
 
 class MessageViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):

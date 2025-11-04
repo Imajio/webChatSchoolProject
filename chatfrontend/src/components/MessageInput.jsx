@@ -1,5 +1,6 @@
-import PropTypes from 'prop-types';
+﻿import PropTypes from 'prop-types';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { IoMdSend } from 'react-icons/io';
 
 export default function MessageInput({ onSend, disabled, chatId }) {
   const [text, setText] = useState('');
@@ -71,18 +72,20 @@ export default function MessageInput({ onSend, disabled, chatId }) {
 
   return (
     <form className="input-bar" onSubmit={handleSubmit}>
-      <textarea
-        placeholder="Type a message"
-        value={text}
-        onChange={(event) => { setText(event.target.value); adjustHeight(); }}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-        ref={inputRef}
-        rows={1}
-      />
-      <button type="submit" disabled={disabled}>
-        Send
-      </button>
+      <div className="input-shell">
+        <textarea
+          placeholder="Type a message"
+          value={text}
+          onChange={(event) => { setText(event.target.value); adjustHeight(); }}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+          ref={inputRef}
+          rows={1}
+        />
+        <button type="submit" disabled={disabled} className="send-btn" aria-label="Send" title="Send">
+          <IoMdSend size={20}/>
+        </button>
+      </div>
     </form>
   );
 }
@@ -92,3 +95,4 @@ MessageInput.propTypes = {
   disabled: PropTypes.bool,
   chatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 };
+

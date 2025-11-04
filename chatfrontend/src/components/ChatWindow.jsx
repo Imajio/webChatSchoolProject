@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+﻿import PropTypes from 'prop-types';
 import { useEffect, useRef } from 'react';
 
 function resolveDisplayName(chat, currentUsername) {
@@ -26,13 +26,7 @@ export default function ChatWindow({ chat, messages, currentUsername }) {
     }
   }, [messages, chat?.id]);
 
-  if (!chat) {
-    return (
-      <div className="chat-window">
-        <div className="chat-header">Select a chat to start messaging.</div>
-      </div>
-    );
-  }
+  if (!chat) { return <div className="chat-window" />; }
 
   const title = resolveDisplayName(chat, currentUsername);
   let avatarSrc = null;
@@ -65,7 +59,7 @@ export default function ChatWindow({ chat, messages, currentUsername }) {
           return (
             <div key={message.id} className={`message${isSelf ? ' self' : ''}`}>
               <div className="meta">
-                {senderLabel} · {new Date(message.timestamp).toLocaleTimeString()}
+                {senderLabel} - {new Date(message.timestamp).toLocaleTimeString()}
               </div>
               <div>{message.message}</div>
             </div>
@@ -89,4 +83,6 @@ ChatWindow.propTypes = {
   ).isRequired,
   currentUsername: PropTypes.string,
 };
+
+
 

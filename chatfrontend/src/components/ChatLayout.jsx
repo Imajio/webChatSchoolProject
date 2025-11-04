@@ -1,4 +1,4 @@
-﻿import PropTypes from 'prop-types';
+import PropTypes from 'prop-types';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import ChatList from './ChatList';
@@ -51,6 +51,20 @@ export default function ChatLayout({ user, onLogout, onUserUpdate }) {
   const [startPending, setStartPending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const drawerRef = useRef(null);
+  // Group chat creation state
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [groupMembers, setGroupMembers] = useState('');
+  const [groupError, setGroupError] = useState(null);
+  const [groupPending, setGroupPending] = useState(false);
+
+  // Drawer UI state
+  const [drawerMode, setDrawerMode] = useState('actions'); // 'actions' | 'add_chat' | 'add_user'
+  const [startCollapsed, setStartCollapsed] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchHints, setSearchHints] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const refreshChats = useCallback(async () => {
     try {
@@ -97,14 +111,27 @@ export default function ChatLayout({ user, onLogout, onUserUpdate }) {
 
   useEffect(() => {
     const onDocClick = (e) => {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
+      const menuEl = menuRef.current;
+      const drawerEl = drawerRef.current;
+      if (!menuEl) return;
+      const inMenu = menuEl.contains(e.target);
+      const inDrawer = drawerEl ? drawerEl.contains(e.target) : false;
+      if (!inMenu && !inDrawer) setMenuOpen(false);
     };
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   }, []);
+
+  // Toggle a body class to help CSS manage pointer-events when menu is open
+  useEffect(() => {
+    try {
+      if (menuOpen) document.body.classList.add('menu-open');
+      else document.body.classList.remove('menu-open');
+    } catch (_) {}
+    return () => {
+      try { document.body.classList.remove('menu-open'); } catch (_) {}
+    };
+  }, [menuOpen]);
 
   const handleIncomingMessage = useCallback((payload) => {
     if (!payload || !payload.message) return;
@@ -160,31 +187,62 @@ export default function ChatLayout({ user, onLogout, onUserUpdate }) {
   }, [startUsername, user.username, request, loadMessages]);
 
   const startButtonLabel = startPending ? 'Starting...' : 'Start chat';
+  const groupButtonLabel = groupPending ? 'Creating...' : 'Create group';
+
+  const handleStartGroup = useCallback(async (event) => {
+    event.preventDefault();
+    const raw = groupMembers || '';
+    const usernames = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!usernames.length) { setGroupError('Add at least one username.'); return; }
+    setGroupPending(true); setGroupError(null);
+    try {
+      const chat = await request('/api/chats/start-group/', {
+        method: 'POST',
+        body: { name: groupName || '', usernames },
+      });
+      setChats((prev) => [chat, ...prev.filter((c) => c.id !== chat.id)]);
+      setSelectedChat(chat);
+      setGroupName('');
+      setGroupMembers('');
+      setShowGroupForm(false);
+      await loadMessages(chat.id);
+    } catch (err) {
+      setGroupError(err.message || 'Failed to create group');
+    } finally {
+      setGroupPending(false);
+    }
+  }, [groupName, groupMembers, request, loadMessages]);
+
+  // Live user search hints
+  useEffect(() => {
+    let abort = false;
+    const run = async () => {
+      const q = searchQuery.trim();
+      if (!q) { setSearchHints([]); return; }
+      setSearchLoading(true);
+      try {
+        const users = await request(`/api/users/?q=${encodeURIComponent(q)}`);
+        if (!abort) setSearchHints(users || []);
+      } catch (_) {
+        if (!abort) setSearchHints([]);
+      } finally {
+        if (!abort) setSearchLoading(false);
+      }
+    };
+    const t = setTimeout(run, 200); // debounce
+    return () => { abort = true; clearTimeout(t); };
+  }, [searchQuery, request]);
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', background: 'var(--panel)' }}>
+        <div className="sidebar-section glass-block">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div className="menu-wrapper" ref={menuRef}>
-              <button
-                className="menu-button"
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((v) => !v)}
-                title="Menu"
-              >
-                ☰
-              </button>
-              {menuOpen ? (
-                <div className="menu" role="menu">
-                  <button className="menu-item" role="menuitem" onClick={() => { setEditingProfile(true); setMenuOpen(false); }}>Edit Profile</button>
-                  <button className="menu-item" role="menuitem" onClick={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setMenuOpen(false); }}>
-                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                  </button>
-                  <button className="menu-item danger" role="menuitem" onClick={() => { onLogout(); setMenuOpen(false); }}>Log Out</button>
-                </div>
-              ) : null}
+              <button className="menu-button" aria-haspopup="true" aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)} title="Menu">☰</button>
             </div>
             <div>
               <div style={{ fontWeight: 600 }}>{user.username}</div>
@@ -192,29 +250,69 @@ export default function ChatLayout({ user, onLogout, onUserUpdate }) {
             </div>
           </div>
         </div>
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', background: 'var(--panel-alt)' }}>
-          <form onSubmit={handleStartChat} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Start a new chat</span>
-            <input type="text" value={startUsername} onChange={(e) => { setStartUsername(e.target.value); setStartError(null); setStartStatus(null); }} placeholder="Enter username" disabled={startPending} style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--panel)', color: 'var(--text)' }} />
-            <button type="submit" disabled={startPending} style={{ padding: '8px 12px', borderRadius: '6px', border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}>{startButtonLabel}</button>
-          </form>
-          {startError ? (<div style={{ marginTop: '8px', color: '#d32f2f', fontSize: '0.85rem' }}>{startError}</div>) : null}
-          {startStatus ? (<div style={{ marginTop: '8px', color: '#2e7d32', fontSize: '0.85rem' }}>{startStatus}</div>) : null}
-        </div>
+        {/* Start-a-new-chat block removed per request */}
         {error ? (<div style={{ padding: '16px', color: '#d32f2f' }}>{error}</div>) : null}
         <ChatList chats={chats} activeChatId={selectedChat?.id ?? null} onSelect={handleSelectChat} currentUsername={user.username} />
       </aside>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Left slide drawer */}
+      <div className={`drawer-backdrop${menuOpen ? ' show' : ''}`} onClick={() => setMenuOpen(false)} />
+      <aside className={`left-drawer${menuOpen ? ' open' : ''}`} aria-hidden={!menuOpen} ref={drawerRef}>
+        <div className="drawer-header">
+          <div style={{ fontWeight: 600 }}>{user.username}</div>
+          <button className="menu-item danger" onClick={() => { onLogout(); setMenuOpen(false); }}>Log Out</button>
+        </div>
+        <div className="drawer-section">
+          <div className="drawer-actions">
+            <button className={drawerMode === 'add_chat' ? 'active' : ''} onClick={() => setDrawerMode('add_chat')}>Add chat</button>
+            <button className={drawerMode === 'add_user' ? 'active' : ''} onClick={() => setDrawerMode('add_user')}>Add user</button>
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? 'Light' : 'Dark'} mode</button>
+          </div>
+          <div className="drawer-search">
+            <input type="text" placeholder="Search users…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            {searchQuery ? (
+              <ul className="search-hints">
+                {searchLoading ? (<li className="hint">Searching…</li>) : null}
+                {(!searchLoading && searchHints.length === 0) ? (<li className="hint muted">No matches</li>) : null}
+                {searchHints.map((u) => (
+                  <li key={u.id} className="hint" onClick={() => {
+                    if (drawerMode === 'add_chat') setStartUsername(u.username);
+                    else setGroupMembers((prev) => (prev ? `${prev}, ${u.username}` : u.username));
+                  }}>
+                    <span className="nick">{u.profile?.nickname || u.username}</span>
+                    {u.profile?.nickname ? <span className="user">@{u.username}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+          {drawerMode === 'add_chat' ? (
+            <form onSubmit={handleStartChat} className="drawer-form">
+              <input type="text" value={startUsername} onChange={(e) => setStartUsername(e.target.value)} placeholder="Username" />
+              <button type="submit" disabled={startPending}>{startButtonLabel}</button>
+            </form>
+          ) : null}
+          {drawerMode === 'add_user' ? (
+            <form onSubmit={handleStartGroup} className="drawer-form">
+              <input type="text" value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Group name (optional)" />
+              <input type="text" value={groupMembers} onChange={(e) => setGroupMembers(e.target.value)} placeholder="Usernames, comma separated" />
+              <button type="submit" disabled={groupPending}>{groupButtonLabel}</button>
+            </form>
+          ) : null}
+        </div>
+      </aside>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
         <ChatWindow
           chat={selectedChat}
           messages={messages}
           currentUsername={user.username}
         />
-        <MessageInput
-          chatId={selectedChat?.id ?? null}
-          onSend={handleSendMessage}
-          disabled={!selectedChat || status !== 'OPEN'}
-        />
+        {selectedChat ? (
+          <MessageInput
+            chatId={selectedChat.id}
+            onSend={handleSendMessage}
+            disabled={status !== 'OPEN'}
+          />
+        ) : null}
       </div>
       <ProfileModal open={editingProfile} onClose={() => setEditingProfile(false)} user={user} onUpdated={(updated) => onUserUpdate && onUserUpdate(updated)} />
     </div>

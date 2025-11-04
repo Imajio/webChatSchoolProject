@@ -12,6 +12,10 @@ function formatTime(timestamp) {
 }
 
 function resolveDisplayName(chat, currentUsername) {
+  // Prefer explicit group name when present
+  if (chat?.is_group && typeof chat?.name === 'string' && chat.name.trim()) {
+    return chat.name.trim();
+  }
   if (!Array.isArray(chat?.participants)) return chat?.name || `Chat ${chat?.id ?? 'new'}`;
   const others = chat.participants.filter(
     (p) => (p?.username || '').toLowerCase() !== currentUsername.toLowerCase()
