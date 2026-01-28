@@ -6,6 +6,10 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from django.shortcuts import render
+from django.conf import settings
+from django.core.mail import send_mail
+from .forms import ContactForm
 
 from .models import Chat, Message, Profile
 from .serializers import (
@@ -228,5 +232,25 @@ def session_view(request):
         serializer = ProfileSerializer(request.user.profile)
         return Response(serializer.data)
     return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# A simple view that renders a template with a ContactForm and calls send_mail.
+# It handles both GET and POST in a single view (requirement #14).
+def send_email_view(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data  # use cleaned data per requirement #13
+            subject = data['subject']
+            # Compose a simple message that includes sender name and message body
+            message = f"From: {data['sender_name']}\n\n{data['message']}"
+            recipient = data['recipient']
+            # This will print the email to the server console because of console backend
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [recipient])
+            # Re-render with an empty form and a flag to show success
+            return render(request, 'send_email.html', {'form': ContactForm(), 'sent': True})
+    else:
+        form = ContactForm()
+    return render(request, 'send_email.html', {'form': form})
 
 

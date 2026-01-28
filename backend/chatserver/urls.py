@@ -19,5 +19,6 @@ urlpatterns = [
     path('api/auth/session/', views.session_view, name='api-session'),
     path('api/', include(router.urls)),
     path('api/auth/', include('rest_framework.urls')),
+    path('send-email/', views.send_email_view, name='send-email'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

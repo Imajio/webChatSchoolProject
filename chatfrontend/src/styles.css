@@ -36,30 +36,36 @@ main {
   display: flex;
   flex: 1;
   height: 100vh;
+  max-width: 100vw; /* Changed to max-width to prevent forcing width */
   overflow: hidden; /* Prevent page scroll; inner panes handle scrolling */
 }
 
 .sidebar {
-  width: 280px;
+  width: 290px;
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
   border-right: 1px solid #ddd;
   background-color: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Only the chat list scrolls */
+  box-sizing: border-box; /* Include border in width calculation */
+  z-index: 10; /* Ensure sidebar stays on top */
 }
 
 .chat-list {
   list-style: none;
   margin: 0;
-  padding: 6px 10px; /* add horizontal insets so items don't touch edges */
+  padding: 6px;
+  padding-right: 0;
   overflow-y: visible; /* custom scrollbar wrapper handles scroll */
   flex: 1; /* Fill sidebar height so only this list scrolls */
 }
 
 .chat-list li {
-  padding: 12px 16px;
+  padding: 12px 12px; /* Reduced horizontal padding */
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
+  margin-right: 14px;
 }
 
 /* Add vertical gaps between chat items without extra space after the last */
@@ -82,7 +88,10 @@ main {
   flex-direction: column;
   background-color: #fafafa;
   min-height: 0; /* Allow inner feed to shrink and scroll */
+  min-width: 0; /* Allow flex to shrink properly */
   height: 100%;
+  overflow: hidden; /* Prevent overflow */
+  box-sizing: border-box; /* Include padding/border in size calculation */
 }
 
 .chat-header {
@@ -105,6 +114,7 @@ main {
   flex: 1;
   min-height: 0;
   padding: 16px;
+  padding-right: 32px; /* More space on the right */
   overflow-y: visible; /* custom scrollbar wrapper handles scroll */
   display: flex;
   flex-direction: column;
@@ -113,6 +123,7 @@ main {
 
 .message {
   max-width: 70%;
+  width: fit-content; /* Shrink to content size */
   padding: 10px 12px;
   border-radius: 12px;
   background-color: #fff;
@@ -302,7 +313,7 @@ body { background: var(--bg); color: var(--text); }
   justify-content: center;
   align-items: flex-end;
   padding: 16px;
-  padding-right: 0; /* Extend to edge for scrollbar */
+  padding-right: 20px; /* Add space on the right */
   margin: 0;
   width: 100%;
   background: transparent;
@@ -314,7 +325,7 @@ body { background: var(--bg); color: var(--text); }
   position: absolute;
   top: 0;
   left: 0;
-  right: 20px; /* Leave space for scrollbar */
+  right: 0; /* Extend blur to right edge */
   bottom: 0;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
@@ -349,9 +360,28 @@ body { background: var(--bg); color: var(--text); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
-  color: #fff;
-  border: none;
+  background: var(--glass-bg);
+  color: var(--accent);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: saturate(180%) blur(var(--blur));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
+  box-shadow: var(--glass-shadow);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.input-shell .send-btn:hover {
+  background: var(--glass-bg-strong);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.input-shell .send-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.input-shell .send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* High-contrast placeholder inside input */
@@ -384,7 +414,7 @@ body { background: var(--bg); color: var(--text); }
 .glass-block { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 3px 3px 12px 3px; }
 /* Ensure icon is visible inside the button */
 .input-shell .send-btn { z-index: 3; }
-.input-shell .send-btn svg { width: 22px; height: 22px; display: block; color: currentColor; }
+.input-shell .send-btn svg { width: 24px; height: 24px; display: flex; color: currentColor; }
 .input-shell .send-btn svg path,
 .input-shell .send-btn svg polygon,
 .input-shell .send-btn svg rect,
@@ -401,8 +431,6 @@ body { background: var(--bg); color: var(--text); }
   -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
   backdrop-filter: saturate(180%) blur(var(--blur));
   border-bottom: none;
-  margin-left: 8px;  /* left space */
-  margin-right: 8px; /* right space */
 }
 .chat-list li:hover { background: color-mix(in srgb, var(--panel) 30%, transparent); }
 .chat-list li.active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
@@ -413,7 +441,7 @@ body { background: var(--bg); color: var(--text); }
   border: 1px solid var(--glass-border);
   -webkit-backdrop-filter: saturate(180%) blur(var(--blur));
   backdrop-filter: saturate(180%) blur(var(--blur));
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--glass-shadow), 0 4px 12px rgba(0,0,0,0.08);
   border-radius: 16px;
   margin: 3px; /* match sidebar top spacing */
   border-bottom: none;
@@ -445,23 +473,23 @@ body { background: var(--bg); color: var(--text); }
    Wrapper + hidden native bars, visible glass thumb/track
    Used by ChatList and MessageFeed via <CustomScroll/>
    ============================== */
-.cs-wrapper { position: relative; min-height: 0; }
-.cs-viewport { overflow: auto; height: 100%; width: 100%; scrollbar-gutter: stable; overscroll-behavior: contain; overflow-anchor: none; }
+.cs-wrapper { position: relative; min-height: 0; height: 289px;}
+.cs-viewport { overflow: auto; height: 100%; width: calc(100%-300px); scrollbar-gutter: stable; overscroll-behavior: contain; overflow-anchor: none; }
 /* Hide native scrollbars */
 .hide-native-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .hide-native-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* Track and thumb */
 .cs-track {
-  position: absolute;
+  position: fixed; /* Fixed to viewport instead of absolute */
   top: 2px;
-  right: 2px;
+  right: 2px; /* Position at screen edge */
   bottom: 2px;
   width: 10px;
   border-radius: 8px;
   background: transparent;
   pointer-events: auto;
-  z-index: 2;
+  z-index: 20;
 }
 .cs-thumb {
   position: absolute;
@@ -471,9 +499,6 @@ body { background: var(--bg); color: var(--text); }
   background: color-mix(in srgb, var(--accent) 60%, transparent);
   box-shadow: 0 2px 10px rgba(0,0,0,0.15);
   cursor: grab;
+  z-index: 20;
 }
 .cs-thumb:active { cursor: grabbing; }
-
-/* Ensure scroll areas don't clip the thumb near the input bar overlay */
-.message-feed.cs-viewport { padding-right: 12px; }
-.chat-list.cs-viewport { padding-right: 6px; }

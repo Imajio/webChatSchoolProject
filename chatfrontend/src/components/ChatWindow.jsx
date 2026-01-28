@@ -1,5 +1,6 @@
 ﻿import PropTypes from 'prop-types';
 import { useEffect, useRef } from 'react';
+import CustomScroll from './CustomScroll';
 
 function resolveDisplayName(chat, currentUsername) {
   if (chat?.name) return chat.name;
@@ -19,10 +20,12 @@ export default function ChatWindow({ chat, messages, currentUsername }) {
 
   // Auto-scroll to bottom when messages update or chat changes
   useEffect(() => {
-    if (endRef.current) {
-      endRef.current.scrollIntoView({ block: 'end', behavior: 'smooth' });
-    } else if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+    const vp = feedRef.current;
+    if (!vp) return;
+    try {
+      vp.scrollTo({ top: vp.scrollHeight, behavior: 'smooth' });
+    } catch (_) {
+      vp.scrollTop = vp.scrollHeight;
     }
   }, [messages, chat?.id]);
 
@@ -48,7 +51,7 @@ export default function ChatWindow({ chat, messages, currentUsername }) {
         )}
         <h2 style={{ margin: 0 }}>{title}</h2>
       </div>
-      <div className="message-feed" ref={feedRef}>
+      <CustomScroll style={{ flex: 1, minHeight: 0 }} viewportClassName="message-feed" viewportRef={feedRef}>
         {messages.map((message) => {
           const isSelf = message.username === currentUsername;
           let senderLabel = message.username;
@@ -66,7 +69,7 @@ export default function ChatWindow({ chat, messages, currentUsername }) {
           );
         })}
         <div ref={endRef} />
-      </div>
+      </CustomScroll>
     </div>
   );
 }

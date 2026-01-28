@@ -1,4 +1,5 @@
 ﻿import PropTypes from 'prop-types';
+import CustomScroll from './CustomScroll';
 
 const DEFAULT_PREVIEW = 'No messages yet';
 
@@ -36,7 +37,7 @@ export default function ChatList({ chats, activeChatId, onSelect, currentUsernam
   }
 
   return (
-    <ul className="chat-list">
+    <CustomScroll style={{ flex: 1, minHeight: 0 }} viewportClassName="chat-list">
       {chats.map((chat) => {
         const title = resolveDisplayName(chat, currentUsername);
         const lastMessage = chat.last_message;
@@ -81,7 +82,7 @@ export default function ChatList({ chats, activeChatId, onSelect, currentUsernam
           </li>
         );
       })}
-    </ul>
+    </CustomScroll>
   );
 }
 
@@ -91,3 +92,4 @@ ChatList.propTypes = {
   onSelect: PropTypes.func.isRequired,
   currentUsername: PropTypes.string.isRequired,
 };
+
