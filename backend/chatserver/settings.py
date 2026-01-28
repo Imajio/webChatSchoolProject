@@ -124,3 +124,7 @@ CSRF_TRUSTED_ORIGINS = ['http://localhost:3000']
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'admin@webchat.com'
 
+# Redirects for auth views
+LOGIN_REDIRECT_URL = '/'  # where to go after successful login
+LOGOUT_REDIRECT_URL = '/'
+

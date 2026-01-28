@@ -234,6 +234,11 @@ def session_view(request):
     return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+def index(request):
+    """Simple homepage view."""
+    return render(request, 'index.html')
+
+
 # A simple view that renders a template with a ContactForm and calls send_mail.
 # It handles both GET and POST in a single view (requirement #14).
 def send_email_view(request):
