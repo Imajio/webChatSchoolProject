@@ -26,6 +26,15 @@
       </span>
     </nav>
     <hr>
+
+    {% if messages %}
+      <ul style="list-style:none;padding:0">
+        {% for message in messages %}
+          <li style="padding:.5rem;border:1px solid #ddd;margin-bottom:.5rem">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
     {% block content %}{% endblock %}
   </body>
 </html>

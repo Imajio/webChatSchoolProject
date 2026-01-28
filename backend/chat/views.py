@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -9,7 +9,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import render
 from django.conf import settings
 from django.core.mail import send_mail
-from .forms import ContactForm
+from .forms import ContactForm, RegistrationForm
 
 from .models import Chat, Message, Profile
 from .serializers import (
@@ -237,6 +237,37 @@ def session_view(request):
 def index(request):
     """Simple homepage view."""
     return render(request, 'index.html')
+
+
+def register_user(request):
+    """Custom registration view handling GET and POST in a single view.
+
+    It validates passwords match (form.clean), creates a new user with a
+    hashed password, and redirects to the login page showing a success message.
+    """
+    from django.contrib import messages
+    User = get_user_model()
+
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+            username = data['username']
+            email = data.get('email') or ''
+            first_name = data.get('first_name') or ''
+            last_name = data.get('last_name') or ''
+            password = data['password1']
+            # Create the user using create_user which handles password hashing
+            user = User.objects.create_user(username=username, email=email)
+            user.first_name = first_name
+            user.last_name = last_name
+            user.set_password(password)
+            user.save()
+            messages.success(request, 'Registration successful. You can now log in.')
+            return redirect('login')
+    else:
+        form = RegistrationForm()
+    return render(request, 'registration/register.html', {'form': form})
 
 
 # A simple view that renders a template with a ContactForm and calls send_mail.
